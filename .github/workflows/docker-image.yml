@@ -1,4 +1,4 @@
-name: Podman CI/CD
+name: Podman CI/CD for To Do List App
 
 on:
   push:
@@ -18,16 +18,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get -y install podman
+          podman --version
 
       - name: Build the Docker image
         run: |
-          podman build . --file Dockerfile --tag docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:${GITHUB_SHA::7}
-          podman tag docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:${GITHUB_SHA::7} docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:latest
+          podman build . --file Dockerfile --tag docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:${GITHUB_SHA::7}
+          podman tag docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:${GITHUB_SHA::7} docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:latest
 
       - name: Run Trivy vulnerability scanner
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
-          trivy image docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:${GITHUB_SHA::7}
+          trivy --version
+          trivy image docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:${GITHUB_SHA::7}
 
       - name: Log in to Docker Hub
         env:
@@ -38,8 +40,8 @@ jobs:
 
       - name: Push to Docker Hub
         run: |
-          podman push docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:${GITHUB_SHA::7}
-          podman push docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:latest
+          podman push docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:${GITHUB_SHA::7}
+          podman push docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:latest
 
   deploy:
     needs: build
@@ -49,7 +51,6 @@ jobs:
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
-          podman pull docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:latest
-          podman stop podman-demo-container || true
-          podman rm podman-demo-container || true
-          podman run -d --name podman-demo-container -p 8080:80 docker.io/${{ secrets.DOCKER_USERNAME }}/podman-demo:latest
+          podman-compose down
+          podman pull docker.io/${{ secrets.DOCKER_USERNAME }}/todo-list-app:latest
+          podman-compose up -d
